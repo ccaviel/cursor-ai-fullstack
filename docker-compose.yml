@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - N8N_HOST=n8n
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - PORT=8081
+    depends_on:
+      redis:
+        condition: service_healthy
+      rag_module:
+        condition: service_started
+      n8n:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  rag_module:
+    build: ./rag_module
+    volumes:
+      - ./rag_module:/app
+      - ./rag_module/chroma_db:/app/chroma_db
+      - ./rag_module/storage:/app/storage
+      - repo_data:/app/repos
+      - model_cache:/root/.cache/huggingface
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - USE_CPU_ONLY=${USE_CPU_ONLY:-false}
+      - NUM_THREADS=${NUM_THREADS:-4}
+      - MODEL_TYPE=${MODEL_TYPE:-huggingface}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GPU_COUNT:-1}
+              capabilities: [gpu]
+          cpus: '${CPU_RESERVATION:-1}'
+          memory: ${MEMORY_RESERVATION:-4G}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.path.exists('/app/chroma_db')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-admin}
+      - N8N_AUTH_TOKEN=${N8N_AUTH_TOKEN}
+      - WEBHOOK_TUNNEL_URL=${N8N_PROTOCOL}://${N8N_HOST}:${N8N_PORT}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-secret-key}
+      - DB_TYPE=sqlite
+      - DB_SQLITE_PATH=/home/node/.n8n/database.sqlite
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  n8n_data:
+  repo_data:
+  model_cache: 

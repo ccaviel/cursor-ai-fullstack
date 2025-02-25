@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src http://localhost:8081">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor AI Agent Webview</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1, h2 { color: #333; }
+    div.section { margin-bottom: 20px; }
+    input { padding: 5px; width: 300px; }
+    button { padding: 5px 10px; margin-left: 5px; }
+    pre { background: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+  </style>
+</head>
+<body>
+  <h1>Cursor AI Agent</h1>
+
+  <div class="section" id="command-section">
+    <h2>Execute Command</h2>
+    <input type="text" id="commandInput" placeholder="Enter command" />
+    <button id="executeBtn">Execute</button>
+  </div>
+
+  <div class="section" id="rag-section">
+    <h2>RAG Query</h2>
+    <input type="text" id="ragInput" placeholder="Enter query" />
+    <button id="ragBtn">Run RAG</button>
+  </div>
+
+  <div class="section" id="orchestrate-section">
+    <h2>Agent Orchestration</h2>
+    <input type="text" id="orchestrateInput" placeholder="Enter task description" />
+    <button id="orchestrateBtn">Orchestrate</button>
+  </div>
+
+  <div class="section" id="git-section">
+    <h2>Git Pull</h2>
+    <button id="gitBtn">Pull Git Repo</button>
+  </div>
+
+  <div class="section" id="n8n-section">
+    <h2>n8n Trigger</h2>
+    <input type="text" id="n8nWebhookInput" placeholder="Enter webhook URL (default: http://localhost:5678/webhook/trigger)" />
+    <input type="text" id="n8nPayloadInput" placeholder="Enter payload JSON (optional)" />
+    <button id="n8nBtn">Trigger n8n</button>
+  </div>
+
+  <div class="section" id="docker-section">
+    <h2>Docker Control</h2>
+    <div class="subsection">
+        <h3>Docker Command</h3>
+        <input type="text" id="dockerInput" placeholder="Enter docker command (e.g., ps, images)" />
+        <button id="dockerBtn">Run Docker</button>
+    </div>
+    <div class="subsection">
+        <h3>Docker Compose</h3>
+        <select id="composeCommand">
+            <option value="up">up</option>
+            <option value="up --build">up --build</option>
+            <option value="down">down</option>
+            <option value="ps">ps</option>
+            <option value="logs">logs</option>
+        </select>
+        <button id="composeBtn">Run Compose</button>
+    </div>
+  </div>
+
+  <div class="section" id="result-section">
+    <h2>Result</h2>
+    <pre id="result"></pre>
+  </div>
+
+  <script>
+    document.getElementById('executeBtn').addEventListener('click', function() {
+      let command = document.getElementById('commandInput').value;
+      fetch('http://localhost:8081/api/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: command })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('ragBtn').addEventListener('click', function() {
+      let query = document.getElementById('ragInput').value;
+      fetch('http://localhost:8081/api/rag', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('orchestrateBtn').addEventListener('click', function() {
+      let task = document.getElementById('orchestrateInput').value;
+      fetch('http://localhost:8081/api/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: task })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('gitBtn').addEventListener('click', function() {
+      fetch('http://localhost:8081/api/git-pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('n8nBtn').addEventListener('click', function() {
+      let webhookUrl = document.getElementById('n8nWebhookInput').value || 'http://localhost:5678/webhook/trigger';
+      let payloadText = document.getElementById('n8nPayloadInput').value;
+      let payload;
+      try {
+        payload = payloadText ? JSON.parse(payloadText) : { message: 'Triggered from Cursor AI' };
+      } catch(e) {
+        payload = { message: 'Triggered from Cursor AI' };
+      }
+      fetch('http://localhost:8081/api/n8n-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhook_url: webhookUrl, payload: payload })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('dockerBtn').addEventListener('click', function() {
+      let command = document.getElementById('dockerInput').value;
+      fetch('http://localhost:8081/api/docker/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: command })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+
+    document.getElementById('composeBtn').addEventListener('click', function() {
+      let command = document.getElementById('composeCommand').value;
+      fetch('http://localhost:8081/api/docker/compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: command })
+      })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('result').innerText = 'Error: ' + error;
+      });
+    });
+  </script>
+</body>
+</html> 

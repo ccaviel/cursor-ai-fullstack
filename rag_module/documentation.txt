@@ -1,0 +1,33 @@
+Cursor AI Fullstack Project Documentation
+
+This project consists of several components:
+
+1. Backend Server (Flask)
+- Handles API requests
+- Manages Docker operations
+- Integrates with n8n workflows
+- Provides RAG capabilities
+
+2. RAG Module
+- Uses LlamaIndex and LangChain for document processing
+- Maintains vector stores for efficient retrieval
+- Supports multiple documentation repositories
+- Provides both LlamaIndex and LangChain responses
+
+3. Docker Integration
+- Containerized services
+- Persistent storage for databases
+- n8n workflow integration
+- Redis caching
+
+4. Environment Configuration
+- Uses .env for configuration
+- Supports development and production modes
+- Configurable API endpoints
+- Customizable storage paths
+
+Usage:
+1. Set up environment variables in .env
+2. Start the backend server
+3. Use the webview interface to interact with endpoints
+4. Configure n8n workflows as needed 
